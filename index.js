@@ -1,95 +1,112 @@
-const http = require("http")
-const socket = require("websocket").server
-const server = http.createServer(() => {
-})
+    const http = require("http");
+    const socket = require("websocket").server;
+    const server = http.createServer(() => {});
 
-server.listen(3000, () => {
+    server.listen(3000, () => {});
 
-})
+    const users = [];
 
-const users = []
-
-const Types = {
+    const Types = {
     SignIn: "SignIn",
     StartConnection: "StartConnection",
     Offer: "Offer",
     Answer: "Answer",
-    IceCandidates: "IceCandidates"
-}
+    IceCandidates: "IceCandidates",
+    };
 
-const webSocket = new socket({httpServer: server})
+    const webSocket = new socket({ httpServer: server });
 
-
-webSocket.on('request', (req) => {
+    webSocket.on("request", (req) => {
     const connection = req.accept();
 
-    connection.on('message', (message) => {
+    connection.on("message", (message) => {
         try {
-            const data = JSON.parse(message.utf8Data);
-            const currentUser = findUser(data.username)
-            const userToReceive = findUser(data.target)
-            console.log(data)
+        const data = JSON.parse(message.utf8Data);
+        const currentUser = findUser(data.username);
+        const userToReceive = findUser(data.target);
+        console.log(data);
 
-            switch (data.type) {
-                case Types.SignIn:
-                    if (currentUser) {
-                        return
-                    }
-
-                    users.push({username: data.username, conn: connection, password: data.data})
-                    break
-                case Types.StartConnection :
-                    if (userToReceive) {
-                            sendToConnection(userToReceive.conn, {
-                                type: Types.StartConnection,
-                                username: currentUser.username,
-                                target: userToReceive.username
-                            })
-                    }
-                    break
-                case Types.Offer :
-                    if (userToReceive) {
-                        sendToConnection(userToReceive.conn, {
-                            type: Types.Offer, username: data.username, data: data.data
-                        })
-                    }
-                    break
-                case Types.Answer :
-                    if (userToReceive) {
-                        sendToConnection(userToReceive.conn, {
-                            type: Types.Answer, username: data.username, data: data.data
-                        })
-                    }
-                    break
-                case Types.IceCandidates:
-                    if (userToReceive) {
-                        sendToConnection(userToReceive.conn, {
-                            type: Types.IceCandidates, username: data.username, data: data.data
-                        })
-                    }
-                    break
+        switch (data.type) {
+            case Types.SignIn:
+            if (currentUser) {
+                return;
             }
-        } catch (e) {
-            console.log(e.message)
+
+            users.push({
+                username: data.username,
+                conn: connection,
+                password: data.data,
+            });
+            break;
+            case Types.StartConnection:
+            if (!currentUser) {
+                console.log("User not found:", data.username);
+                return;
+            }
+            if (userToReceive) {
+                sendToConnection(userToReceive.conn, {
+                type: Types.StartConnection,
+                username: currentUser.username,
+                target: userToReceive.username,
+                });
+            } else {
+                // Send error back to sender
+                sendToConnection(currentUser.conn, {
+                type: "Error",
+                username: "server",
+                target: data.username,
+                data: "Target user not found",
+                });
+            }
+            break;
+            case Types.Offer:
+            if (userToReceive) {
+                sendToConnection(userToReceive.conn, {
+                type: Types.Offer,
+                username: data.username,
+                target: data.target,
+                data: data.data,
+                });
+            }
+            break;
+            case Types.Answer:
+            if (userToReceive) {
+                sendToConnection(userToReceive.conn, {
+                type: Types.Answer,
+                username: data.username,
+                data: data.data,
+                });
+            }
+            break;
+            case Types.IceCandidates:
+            if (userToReceive) {
+                sendToConnection(userToReceive.conn, {
+                type: Types.IceCandidates,
+                username: data.username,
+                data: data.data,
+                });
+            }
+            break;
         }
-
+        } catch (e) {
+        console.log(e.message);
+        }
     });
-    connection.on('close', () => {
-        users.forEach(user => {
-            if (user.conn === connection) {
-                users.splice(users.indexOf(user), 1)
-            }
-        })
-    })
-});
+    connection.on("close", () => {
+        users.forEach((user) => {
+        if (user.conn === connection) {
+            users.splice(users.indexOf(user), 1);
+        }
+        });
+    });
+    });
 
+    const sendToConnection = (connection, message) => {
+    connection.send(JSON.stringify(message));
+    };
 
-const sendToConnection = (connection, message) => {
-    connection.send(JSON.stringify(message))
-}
-
-const findUser = username => {
+    const findUser = (username) => {
     for (let i = 0; i < users.length; i++) {
-        if (users[i].username === username) return users[i]
+        if (users[i].username === username) return users[i];
     }
-}
+    };
