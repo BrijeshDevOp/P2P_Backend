@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: webrtc-server
+    env: node
+    plan: free
+    branch: server   # 👈 tell Render to deploy from 'server' branch
+    buildCommand: "npm install"
+    startCommand: "npm start"
